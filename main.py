@@ -3,7 +3,7 @@ import Database
 import os
 import discord
 import private
-from Commands import executeCommand
+from Commands import execute_command
 
 intents = discord.Intents.default()
 intents.members = True
@@ -17,6 +17,6 @@ async def on_ready():
 @client.event
 async def on_message( message ):
 	if message.content.startswith ( private.COMMANDSYNTAX ):
-		await executeCommand ( message )
+		await execute_command ( message )
 
 client.run ( private.TOKEN ) 

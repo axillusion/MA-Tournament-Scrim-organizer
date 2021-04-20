@@ -35,7 +35,3 @@ def read_query(connection, query):
         return result
     except Error as err:
         print(f"Error: '{err}'")
-
-#SELECT * FROM MMR JOIN LINK ON MMR.discord_id = LINK.discord_id JOIN SCRIMS ON SCRIMS.scrim_id = LINK.scrim_id;
-#SELECT *  FROM MMR  JOIN LINK JOIN SCRIMS;
-

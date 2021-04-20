@@ -3,9 +3,38 @@ from discord import message
 import private
 from Database import execute_query, read_query
 import random
+import asyncio
 
 scrim_message = ''
+players = []
+cnt_players = 0
 
+async def add_player ( user ):
+	for id in players:
+		if user.id == id:
+			return 
+	global scrim_message
+	global cnt_players
+	scrim_message += str ( user.name ) + ' '
+	players.append ( user.id )
+	sql = """ 
+	SELECT MMR
+	FROM MMR
+	WHERE discord_id = {}
+	""".format ( user.id )
+	data = read_query ( private.db_connection, sql )
+	data = str ( data )
+	scrim_message += data[2:-3] + "\n"
+	await private.LastScrim.edit ( content = str ( scrim_message + "```" ) )
+	cnt_players += 1
+	if cnt_players == 8:
+		for id in players:
+			sql = """
+			INSERT INTO LINK ( discord_id, scrim_id, winners )
+			VALUES ( '{}', '{}', '{}' )
+			""".format ( id, private.LastScrim.id, False )
+			execute_query ( private.db_connection, sql )
+	
 async def __init ( command ):
 	async for member in command.guild.fetch_members ( limit = None ):
 		sql = """
@@ -14,8 +43,10 @@ async def __init ( command ):
 		WHERE discord_id = {}
 		""".format ( member.id )
 		data = read_query ( private.db_connection, sql )
-		data = data[2:-2]
-		if data == None:
+		data = str ( data )
+		data = data[2:-3]
+		print ( data )
+		if data == '':
 			sql = """
 			INSERT INTO MMR ( discord_id, discord_name, MMR, Wins, Loses )
 			VALUES ( '{}', '{}', '{}', '{}', '{}' )
@@ -82,37 +113,19 @@ async def __getMmrList ( command ):
 	await command.author.send ( send )
 	
 async def __startScrim ( command ):
+	global scrim_message
 	scrim_id = random.randint ( 100000, 999999 )
-	message_content = ''
-	message_content += """
-	The Scrim id is : {}
-	Type 'join' to join the current scrim
-	Players are :
+	scrim_message = ''
+	scrim_message += """
+	```
+The Scrim id is : {}
+React with 👍 to join the current scrim
+Players are :
 	""".format ( scrim_id )
+	private.LastScrim = await command.channel.send ( scrim_message + "```" )
+	await private.LastScrim.add_reaction ( '👍' )
 	players = ''
-	message = await command.channel.send ( message_content )
-	print ( message.content )
-	def check ( m ):
-		return m.content == 'join'
-	for _ in range ( 0, 8 ):
-		user = await private.client.wait_for ( 'message', check = check )
-		message_content += str ( user.name ) + ' '
-		players += str ( user.name ) + ', '
-		sql = """
-		SELECT MMR
-		FROM MMR
-		WHERE discord_id = {}
-		""".format ( user.id )
-		data = read_query ( private.db_connection, sql )
-		data = str ( data )
-		message_content += data[2:-3]
-		await message.edit ( message_content )
-		print ( message_content )
-	sql = """
-	INSERT INTO SCRIMS ( scrim_id, players, finished )
-	VALUES ( '{}', '{}', '{}' )
-	""".format ( scrim_id, players, False )
-	execute_query ( private.db_connection, sql )
+	cnt_players = 0
 
 async def __endScrim ( command ):
 	msg = command.content.split()
